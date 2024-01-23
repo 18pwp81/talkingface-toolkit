@@ -341,9 +341,8 @@ def data_process_hyper_base(args):
         # 获取视频文件名和所在目录名
         vidname = os.path.basename(vfile).split('.')[0]
         dirname = vfile.split('/')[-2]
-
         # 构建保存图片的目录路径
-        fulldir = path.join(args.hyperlips_train_dataset, "imgs", dirname, vidname)
+        fulldir = path.join(args.hyperlips_train_dataset, "imgs", "MEAD", vidname)
         os.makedirs(fulldir, exist_ok=True)
 
         # 将帧划分为批次进行处理

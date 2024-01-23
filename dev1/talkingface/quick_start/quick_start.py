@@ -68,14 +68,11 @@ def run_talkingface(
     logger = getLogger()
     logger.info(sys.argv)
     logger.info(config)
-
     #data processing
     # print(not (os.listdir(config['preprocessed_root'])))
     if config['need_preprocess'] and (not (os.path.exists(config['preprocessed_root'])) or not (os.listdir(config['preprocessed_root']))):
         get_preprocess(config['dataset'])(config).run()
     train_dataset, val_dataset = create_dataset(config)
-    print("训练数据集信息:")
-    print(train_dataset)
     train_data_loader = data_utils.DataLoader(
         train_dataset, batch_size=config["batch_size"], shuffle=True
     )
