@@ -182,6 +182,7 @@ class HyperLipsBase(AbstractTalkingFace):
 
         return loss
 
+    # TODO: 讨论是否需要完成该函数
     def generate_batch(self):
         file_dict = {}
         return file_dict

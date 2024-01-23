@@ -90,10 +90,47 @@ class HyperLipsHR(AbstractTalkingFace):
     def predict(self, audio_sequences, face_sequences):
         return self.forward(audio_sequences, face_sequences)
 
+# TODO: 确认此处的损失计算是否正确，源代码中没有syncnet_loss，定义了cosine_loss没有使用
     def calculate_loss(self, interaction, valid=False):
-        loss, l1loss, sync_loss = 0, 0, 0
+        r"""Calculate the training loss for a batch data.
+
+        Args:
+            interaction (Interaction): Interaction class of the batch.
+
+        Returns:
+            torch.Tensor: Training loss, shape: []
+        """
+        indiv_mels = interaction['indiv_mels'].to(self.config['device'])
+        input_frames = interaction['input_frames'].to(self.config['device'])
+        mel = interaction['mels'].to(self.config['device'])
+        gt = interaction['gt'].to(self.config['device'])
+        g_frames = self.forward(indiv_mels, input_frames)
+        l1loss = self.l1loss(g_frames, gt)
+        if self.config['syncnet_wt'] > 0 or valid:
+            sync_loss = self.syncnet_loss(mel, g_frames)
+        else:
+            sync_loss = 0
+
+        loss = self.config['syncnet_wt'] * sync_loss + (1 - self.config['syncnet_wt']) * l1loss
         return {"loss": loss, "l1loss": l1loss, "sync_loss": sync_loss}
 
+    def syncnet_loss(self, mel, g_frames):
+        syncnet = self.load_syncnet()
+        syncnet.eval()
+        g = g_frames[:, :, :, g_frames.size(3) // 2:]
+        g = torch.cat([g[:, :, i] for i in range(self.config['syncnet_T'])], dim=1)
+        # B, 3 * T, H//2, W
+        a, v = syncnet(mel, g)
+        y = torch.ones(g.size(0), 1).float().to(self.config['device'])
+        return self.cosine_loss(a, v, y)
+
+    def cosine_loss(self, a, v, y):
+        d = nn.functional.cosine_similarity(a, v)
+        loss = self.bceloss(d.unsqueeze(1), y)
+
+        return loss
+
+    # TODO: 讨论是否需要完成该函数
     def generate_batch(self):
         file_dict = {}
         return file_dict
